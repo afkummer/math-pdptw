@@ -20,7 +20,7 @@ import sys 		#for reading command line arguments
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import scale, robust_scale
 
 np.random.seed(int(sys.argv[2])) #set a seed to always generate the same cluster
 
@@ -48,6 +48,7 @@ instance_name = vstack(instance_name_arr)
 
 #Standardization, or mean removal and variance scaling
 data = scale(data_arr)
+#data = robust_scale(data_arr)
 
 n_samples, n_features = data.shape
 
@@ -159,6 +160,6 @@ textfile.close()
 
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
-plt.xticks(())
-plt.yticks(())
+#plt.xticks(())
+#plt.yticks(())
 plt.show()
