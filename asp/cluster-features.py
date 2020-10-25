@@ -58,6 +58,7 @@ print("n_digits: %d, \t n_samples %d, \t n_features %d"
 def bench_k_means(estimator, name, data):
     t0 = time()
     estimator.fit(data)
+    print("name: %s   inertia_: %f   silhouette_score: %f" % (name, estimator.inertia_, metrics.silhouette_score(data, estimator.labels_)))
 #    print('%-9s\t%.2fs\t%i\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f'
 #          % (name, (time() - t0), estimator.inertia_,
 #             metrics.homogeneity_score(labels, estimator.labels_),
@@ -68,6 +69,15 @@ def bench_k_means(estimator, name, data):
 #             metrics.silhouette_score(data, estimator.labels_,
 #                                      metric='euclidean',
 #                                      sample_size=sample_size)))
+
+# Runs a quick benchmark with several cluster variations.
+print('-' * 80)
+print("Benchmarking with several k values: ")
+rang = 10
+for k in range(max(2, n_digits-rang), min(len(instance_name_arr)-1, n_digits+rang)):
+   bench_k_means(KMeans(init='k-means++', n_clusters=k, n_init=4),
+              name="k-means++ (k=" + str(k) + ")", data=data)
+print('-' * 80)
 
 bench_k_means(KMeans(init='k-means++', n_clusters=n_digits, n_init=4),
               name="k-means++", data=data)
