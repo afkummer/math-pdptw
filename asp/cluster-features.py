@@ -36,6 +36,7 @@ def attach_mouse_listener(fig, sc, names):
          if cont:
             pos = sc.get_offsets()[ind["ind"][0]]
             annot.xy = pos
+            annot.zorder = 10
             text = names[ind["ind"][0]]
             annot.set_text(text)
             annot.get_bbox_patch().set_alpha(0.8)
