@@ -1,165 +1,167 @@
-# This code forms k clusters with the instances given as input.
-# the number of clusters k is given as input
-# The data input should be a file in csv format with the first line containing the name of columns and the first column containing the name of each instance
-# USAGE: phyton3 cluster-features.py K seed data_file.csv
-# it generates a CSV file with the clusters
-# EXAMPLE: python3 cluster-features.py 8 31415 features-all-instances.csv
-print(__doc__)
+#!/usr/bin/env python3
+#! -*- coding: utf-8 -*-
 
-from time import time
+from sys import argv
+
+import random
 import numpy as np
 import matplotlib.pyplot as plt
+import csv 		
 
-from numpy            import vstack,array
-from numpy.random     import rand
 from scipy.cluster.vq import kmeans, vq, whiten
-import csv 		#for reading csv file
-import sys 		#for reading command line arguments
-
 
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import scale, robust_scale
-
-np.random.seed(int(sys.argv[2])) #set a seed to always generate the same cluster
-
-
-#n_digits defines the number of clusters
-n_digits=int(sys.argv[1])
-
-
-#bloco
-data_arr = []
-instance_name_arr = []
-
-with open(sys.argv[3], newline='') as f:
-     reader = csv.reader(f, delimiter=',', quoting=csv.QUOTE_NONE)
-     next(reader) #remove the first line of the csv file
-     for row in reader:
-         data_arr.append([float(x) for x in row[1:]])
-         instance_name_arr.append([row[0]])
-
-data = vstack( data_arr )
-instance_name = vstack(instance_name_arr)
-
-# normalization
-#data = whiten(data)
-
-#Standardization, or mean removal and variance scaling
-data = scale(data_arr)
-#data = robust_scale(data_arr)
-
-n_samples, n_features = data.shape
-
-print("n_digits: %d, \t n_samples %d, \t n_features %d"
-      % (n_digits, n_samples, n_features))
-
+from sklearn.preprocessing import scale, robust_scale, minmax_scale, maxabs_scale
 
 def bench_k_means(estimator, name, data):
-    t0 = time()
-    estimator.fit(data)
-    print("name: %s   inertia_: %f   silhouette_score: %f" % (name, estimator.inertia_, metrics.silhouette_score(data, estimator.labels_)))
-#    print('%-9s\t%.2fs\t%i\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f'
-#          % (name, (time() - t0), estimator.inertia_,
-#             metrics.homogeneity_score(labels, estimator.labels_),
-#             metrics.completeness_score(labels, estimator.labels_),
-#             metrics.v_measure_score(labels, estimator.labels_),
-#             metrics.adjusted_rand_score(labels, estimator.labels_),
-#             metrics.adjusted_mutual_info_score(labels,  estimator.labels_),
-#             metrics.silhouette_score(data, estimator.labels_,
-#                                      metric='euclidean',
-#                                      sample_size=sample_size)))
+   """ Runs the benchmarking of the k-means algorithm. """
+   estimator.fit(data)
+   print("name: %s   inertia_: %f   silhouette_score: %f" % (name, estimator.inertia_, metrics.silhouette_score(data, estimator.labels_)))
 
-# Runs a quick benchmark with several cluster variations.
-print('-' * 80)
-print("Benchmarking with several k values: ")
-rang = 10
-for k in range(max(2, n_digits-rang), min(len(instance_name_arr)-1, n_digits+rang)):
-   bench_k_means(KMeans(init='k-means++', n_clusters=k, n_init=4),
-              name="k-means++ (k=" + str(k) + ")", data=data)
-print('-' * 80)
+def attach_mouse_listener(fig, sc, names):
+   """ Allows visualizing the data associated with the points. """
+   # Prepare the anottation that receives the data.
+   annot = ax.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
+      bbox=dict(boxstyle="round", fc="w"),
+      arrowprops=dict(arrowstyle="->"))
+   annot.set_visible(False)
+   
+   # Defines the callback for mouse motion.
+   def hover(event):
+      vis = annot.get_visible()
+      if event.inaxes == ax:
+         cont, ind = sc.contains(event)
+         if cont:
+            pos = sc.get_offsets()[ind["ind"][0]]
+            annot.xy = pos
+            text = names[ind["ind"][0]]
+            annot.set_text(text)
+            annot.get_bbox_patch().set_alpha(0.8)
+            annot.set_visible(True)
+         else:
+            if vis: annot.set_visible(False)
+         fig.canvas.draw_idle()
 
-bench_k_means(KMeans(init='k-means++', n_clusters=n_digits, n_init=4),
-              name="k-means++", data=data)
-
-bench_k_means(KMeans(init='random', n_clusters=n_digits, n_init=4),
-              name="random", data=data)
-
-# in this case the seeding of the centers is deterministic, hence we run the
-# kmeans algorithm only once with n_init=1
-pca = PCA(n_components=n_digits).fit(data)
-bench_k_means(KMeans(init=pca.components_, n_clusters=n_digits, n_init=1),
-              name="PCA-based",
-              data=data)
-print(82 * '_')
+   # Attach the callback to the plot.
+   fig.canvas.mpl_connect("motion_notify_event", hover)
 
 
-# #############################################################################
-# Visualize the results on PCA-reduced data
+if __name__ == "__main__":
+   if len(argv) != 4:
+      print("Usage: %s <1:seed> <2:features csv> <3:num clusters>" % argv[0])
+      exit(1)
 
-reduced_data = PCA(n_components=2).fit_transform(data)
-kmeans = KMeans(init='k-means++', n_clusters=n_digits, n_init=4)
-kmeans.fit(reduced_data)
+   # Parse command line and print the script arguments.   
+   print("--- Clustering with k-mens ---")
+   seed = int(argv[1])
+   print("Seed: " + str(seed))
+   feat_csv = argv[2]
+   print("Features CSV: " + feat_csv)
+   num_clusters = int(argv[3])
+   print("Number of clusters to generate: " + str(num_clusters))
 
-# Step size of the mesh. Decrease to increase the quality of the VQ.
-h = .02     # point in the mesh [x_min, x_max]x[y_min, y_max].
+   # Seeding of the RNG.
+   # SciKit-learn uses only the np.random, but I prefer to play safe
+   # and seed also the random from stdlib.
+   np.random.seed(seed)
+   random.seed(seed)
 
-# Plot the decision boundary. For that, we will assign a color to each
-x_min, x_max = reduced_data[:, 0].min() - 1, reduced_data[:, 0].max() + 1
-y_min, y_max = reduced_data[:, 1].min() - 1, reduced_data[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+   print()
 
-# Obtain labels for each point in mesh. Use last trained model.
-Z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
+   # Importing of the features CSV.
+   with open(feat_csv) as fid:
+      reader = csv.reader(fid)
+      feature_names = [x.strip() for x in fid.readline().split(",")[1:]]
+      instance_names = []
+      features_data = []
+      for row in reader:
+         instance_names.append(row[0].strip())
+         features_data.append([float(x) for x in row[1:]])
 
-# Put the result into a color plot
-Z = Z.reshape(xx.shape)
-plt.figure(1)
-plt.clf()
-plt.imshow(Z, interpolation='nearest',
-           extent=(xx.min(), xx.max(), yy.min(), yy.max()),
-           cmap=plt.cm.Paired,
-           aspect='auto', origin='lower')
+   # Convert the data to the format used internally in numpy and scipy.
+   features_data = np.vstack(features_data)
+   print("The input data contains %d instances and %d features." % (features_data.shape[0], features_data.shape[1]))
+   print("Possible number of clusters to generate: 1 up to %d." % features_data.shape[1])
 
-plt.plot(reduced_data[:, 0], reduced_data[:, 1], 'k.', markersize=2)
-# Plot the centroids as a white X
-centroids = kmeans.cluster_centers_
-plt.scatter(centroids[:, 0], centroids[:, 1],
-            marker='x', s=169, linewidths=3,
-            color='w', zorder=4)
-plt.title('K-means clustering (PCA-reduced data)\n'
-          'Centroids are marked with white cross')
+   print()
 
- # assign each sample to a cluster
-idx,_ = vq(reduced_data,centroids)
+   # Normalize the input data. 
+   features_data = scale(features_data)
 
+   # Runs a quick benchmark with several cluster variations.
+   print('-' * 80)
+   print("Benchmarking with several k values: ")
+   rang = 10
+   for k in range(max(2, num_clusters-rang), min(len(instance_names)-1, num_clusters+rang)):
+      bench_k_means(KMeans(init='k-means++', n_clusters=k, n_init=10),
+         name="k-means++ (k=" + str(k) + ")", data=features_data)
+   print('-' * 80)
 
-# print results and save result in a file
-# Open the file with writing permission
+   # Prepare the data for visualization in 2D-plot.
+   reduced_data = PCA(n_components=2, random_state=np.random.randint(1)).fit_transform(features_data)
+   kmeans = KMeans(init='k-means++', n_clusters=num_clusters, n_init=10)
+   kmeans.fit(reduced_data)
 
-filename = "clustID" + "-" + sys.argv[1] + "-" + sys.argv[2] + ".csv"
-textfile = open(filename, 'w')
+   # Step size of the mesh. Decrease to increase the quality of the VQ.
+   h = .005     # point in the mesh [x_min, x_max]x[y_min, y_max].
 
+   # Plot the decision boundary. For that, we will assign a color to each
+   x_min, x_max = reduced_data[:, 0].min() - 1, reduced_data[:, 0].max() + 1
+   y_min, y_max = reduced_data[:, 1].min() - 1, reduced_data[:, 1].max() + 1
+   xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
+   # Obtain labels for each point in mesh. Use last trained model.
+   Z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
 
-for i in range(n_digits):
-    result_names = instance_name[idx==i, 0]
-    print("=================================")
-    print("Cluster " + str(i+1))
-    for name in result_names:
-        print(name.strip())
-        s=','
-        #strip removes the white spaces of the string - there was one at the end
-        textfile.write(name.strip())
-        textfile.write(s)
-        textfile.write('{:d}\n'.format(i))
+   # Put the result into a color plot
+   Z = Z.reshape(xx.shape)
+   fig, ax = plt.subplots()
+   plt.imshow(Z, interpolation='nearest',
+      extent=(xx.min(), xx.max(), yy.min(), yy.max()),
+      cmap=plt.cm.Paired,
+      aspect='auto', origin='lower')
+   
+   # Plot the centroids as a white x.
+   centroids = kmeans.cluster_centers_
+   plt.scatter(centroids[:, 0], centroids[:, 1],
+               marker='x', s=169, linewidths=3,
+               color='w', zorder=4)
 
-textfile.close()
+   # Plot the instance points.
+   sc = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], color='k', s=3)
 
+   # Define the limits of the plotting area.
+   plt.title('K-means clustering (PCA-reduced data)\nCentroids are marked with white cross')
+   plt.xlim(x_min, x_max)
+   plt.ylim(y_min, y_max)
 
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-#plt.xticks(())
-#plt.yticks(())
-plt.show()
+   # Format the names and the distances to cluster centroids of the instances.
+   idx, dist = vq(reduced_data, centroids)
+   text_hover = []
+   for i in range(features_data.shape[0]):
+      txt = "%s (d=%.3f)" % (instance_names[i], dist[i])
+      text_hover.append(txt)
+
+   # Attach the event listener for capturing the mouse moves.
+   attach_mouse_listener(fig, sc, text_hover)
+
+   
+   # Write the clustering to a csv file. Also outputs to the stdout.
+   print("Clustering outputs:")
+   with open("clustering-" + str(seed) + "-" + str(num_clusters) + ".csv", "w") as fid:
+      fid.write("instance,cluster,dist.centroid\n")
+      names = np.vstack(instance_names)
+      for i in range(num_clusters):
+         print("-" * 80)
+         print("Cluster: %d" % i)
+         rn = names[idx==i, 0]
+         rd = dist[idx==i]
+         for j in range(len(rd)):
+            print("%s\t%.4f" % (rn[j], rd[j]))
+            fid.write("%s,%d,%f\n" % (rn[j], i, rd[j]))       
+
+   # Save the plot into a PDF file, then show it in the screen.
+   plt.savefig("clustering-" + str(seed) + "-" + str(num_clusters) + ".pdf")
+   plt.show()

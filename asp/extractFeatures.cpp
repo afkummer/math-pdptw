@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
    for (size_t i = 0; i < data.nodes.size(); ++i) {
       for (size_t j = i+1; j < data.nodes.size(); ++j) {
          dist.add(data.times[i][j]);
-         asymDist = pow(data.times[i][j] - data.times[j][i], 2);
+         asymDist += pow(data.times[i][j] - data.times[j][i], 2);
       }
    }
 
