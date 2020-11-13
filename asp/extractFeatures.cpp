@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "common/data.hpp"
+#include "constructor/constructor.hpp"
 
 using namespace std;
 
@@ -60,6 +61,8 @@ int main(int argc, char **argv) {
    StatMetrics demands("demand");
    StatMetrics twBeg("tw.begin"), twEnd("tw.ending"), twDur("tw.duration");
    StatMetrics dist("distance");
+   StatMetrics greedyRouteLength("greedy.rlen");
+   StatMetrics greedyRouteCost("greedy.cost");
 
    // Extract node demands and tw.
    for (const Node &n: data.nodes) {
@@ -77,6 +80,16 @@ int main(int argc, char **argv) {
          twDur.add(n.ltw - n.etw);
       }
    }
+
+   // Compute a solution using the greedy heuristics (fast). 
+   mt19937_64 rng(1);
+   Constructor constr(data, rng);
+   Solution solGreedy = constr.greedy_heuristic();
+   for (Route r: solGreedy.routes) {
+      greedyRouteLength.add(r.size());
+      greedyRouteCost.add(r.cost);
+   }
+
 
    // Computes metrics of the distance matrix.
    // Also compute a metric of how assymetric the matrix is.
@@ -100,6 +113,13 @@ int main(int argc, char **argv) {
          << twDur.csvHeaders() << ","
          << dist.csvHeaders() << ","
          << "distance.asym.sq" << ","
+         << "nodes" << ","
+         << "tw.depot.start" << ","
+         << "tw.depot.finish" << ","
+         << "vehicle.cap" << "," 
+         << greedyRouteLength.csvHeaders() << ","
+         << greedyRouteCost.csvHeaders() << ","
+
 
 
          << "tightenings,"
@@ -124,17 +144,39 @@ int main(int argc, char **argv) {
       << twDur.csvData() << ","
       << dist.csvData() << ","
       << asymDist << ","
+      << data.nodes.size()-2 << "," 
+      << data.nodes.front().etw << ","
+      << data.nodes.front().ltw << ","
+      << data.vcap << ","
+      << greedyRouteLength.csvData() << ","
+      << greedyRouteCost.csvData() << ","
+
 
 
       << data.nref << ","
       << data.nconf
       << endl;
 
+   // I am lazy, so I depend of running this program to convert the 
+   // data to a format that is easeier to process in python.
+   {
+      ofstream fid("points.csv");
+      fid << "node,x,y\n";
+
+      int id = 0;
+      for (const auto &n: data.nodes) {
+         if (id != 0 && id != data.nodes.size()-1)
+            fid << id << "," << n.x << "," << n.y << "\n";
+         ++id;
+      }
+   }
+
    return EXIT_SUCCESS;
 }
 
 StatMetrics &StatMetrics::add(double val) {
    m_data.push_back(val);
+   return *this;
 }
 
 StatMetrics &StatMetrics::computeMetrics() {
@@ -160,6 +202,8 @@ StatMetrics &StatMetrics::computeMetrics() {
    } else {
       m_sd = .0;
    }
+
+   return *this;
 }
 
 const string StatMetrics::csvHeaders() const {

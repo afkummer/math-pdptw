@@ -19,7 +19,8 @@ all: featExt
 featExt: extractFeatures.cpp
 	$(CXX) $(CXXFLAGS) -o featExt \
 		extractFeatures.cpp \
-		../code/common/data.cpp
+		../code/common/data.cpp \
+		../code/constructor/constructor.cpp
 
 clean:
 	rm -f featExt
