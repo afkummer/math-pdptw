@@ -14,9 +14,20 @@ __Note:__ The 13 is just a upper-bound in the number of clusters we allow the al
 
 ## _K_-means with 30 clusters
 
-![sartori-kmeans-30/(.github/sartori-kmeans-30.svg)
+![sartori-kmeans-30](.github/sartori-kmeans-30.svg)
 
 ## Agglomerated clustering with 30 clusters
 
 ![sartori-aggclust-30](.github/sartori-aggclust-30.svg)
+
+# Samples for both datasets into a single features table
+
+## _K_-means with 19 clusters
+
+![.github/all-kmeans-19](.github/all-kmeans-19.svg)
+
+## Agglomerated clustering with 30 clusters
+
+![.github/all-aggclust-30](.github/all-aggclust-30.svg)
+
 
